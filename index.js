@@ -1,7 +1,9 @@
 const fs = require('fs/promises');
 const Canvas = require('canvas');
 
-const states = [ 'up', 'left', 'down', 'right', 'hit', 'dead' ];
+
+let states = Array.from({ length: 169 }).map((_, no) => ({ no, actions: ['up', 'left', 'down', 'right', 'hit', 'dead'] }));
+[31, 32, 33, 34].forEach(x => states[x].actions = ['up', 'left', 'down', 'right']);
 
 (async () => {
     const files = await fs.readdir('./raw');
@@ -43,25 +45,24 @@ const states = [ 'up', 'left', 'down', 'right', 'hit', 'dead' ];
         })
     );
 
-    const units = [];
-    sprites = sprites.flat();    
-    for (let index = 0; units.length < 171; index += 12) {
-        const unit = {};
-        states.reduce((cnt, state) => {
-            unit[state] = [sprites[cnt], sprites[cnt + 1]];
-            return cnt + 2;
-        }, index);
-        units.push(unit);
-    }
+    sprites = sprites.flat();
+    let spriteIndex = 0;
+    const units = states.map(({ no, actions }) => {
+        return actions.reduce((obj, action) => {
+            obj[action] = [sprites[spriteIndex], sprites[spriteIndex + 1]];
+            spriteIndex += 2;
+            return obj;
+        }, {});
+    });
 
-    for( let unitIndex = 0; unitIndex < units.length; ++unitIndex ) {
+    for (let unitIndex = 0; unitIndex < units.length; ++unitIndex) {
         const unit = units[unitIndex];
         Object.entries(unit).forEach(async ([state, canvases]) => {
-            for( let canvasIndex = 0; canvasIndex < canvases.length; ++canvasIndex ) {
+            for (let canvasIndex = 0; canvasIndex < canvases.length; ++canvasIndex) {
                 const canvas = canvases[canvasIndex];
                 await fs.writeFile(`./out/${unitIndex}_${state}_${canvasIndex}.png`, canvas.toBuffer('image/png'));
-            }    
+            }
         });
     }
-    console.log('Done!');    
+    console.log('Done!');
 })();
